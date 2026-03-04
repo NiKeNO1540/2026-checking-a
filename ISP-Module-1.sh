@@ -1,56 +1,124 @@
 #!/bin/bash
 
 # Файл для записи результатов
-LOG_FILE="system_check_results.txt"
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+LOG_FILE="/var/log/system_check.log"
 
-echo "=== Результаты проверки системы - $TIMESTAMP ===" | tee "$LOG_FILE"
-echo "" | tee -a "$LOG_FILE"
+# Очистка лог-файла
+> "$LOG_FILE"
 
-# Проверка IP адресов
-echo "1. Проверка IP адресов:" | tee -a "$LOG_FILE"
+# Функция для логирования и вывода
+log_and_echo() {
+    echo "$1"
+    echo "$1" >> "$LOG_FILE"
+}
 
-echo "Проверка 172.16.1.1:" | tee -a "$LOG_FILE"
-if ip a | grep -q "172.16.1.1"; then
-    echo "✓ Найден IP 172.16.1.1" | tee -a "$LOG_FILE"
-else
-    echo "✗ IP 172.16.1.1 не найден" | tee -a "$LOG_FILE"
-fi
+# Функция выполнения проверки
+execute_check() {
+    local description="$1"
+    local command="$2"
+    
+    log_and_echo "Проверка: $description"
+    log_and_echo "Команда: $command"
+    
+    local output
+    output=$(eval "$command" 2>&1)
+    local exit_code=$?
+    
+    echo "$output" >> "$LOG_FILE"
+    echo "$output"
+    
+    if [ $exit_code -eq 0 ]; then
+        log_and_echo "✓ УСПЕХ"
+    else
+        log_and_echo "✗ ОШИБКА (код: $exit_code)"
+    fi
+    
+    log_and_echo ""
+    return $exit_code
+}
 
-echo "Проверка 172.16.2.1:" | tee -a "$LOG_FILE"
-if ip a | grep -q "172.16.2.1"; then
-    echo "✓ Найден IP 172.16.2.1" | tee -a "$LOG_FILE"
-else
-    echo "✗ IP 172.16.2.1 не найден" | tee -a "$LOG_FILE"
-fi
+# ============================================================================
+# НАЧАЛО ПРОВЕРКИ
+# ============================================================================
 
-echo "" | tee -a "$LOG_FILE"
+clear
+log_and_echo "╔══════════════════════════════════════════════════════════════╗"
+log_and_echo "║         ПРОВЕРКА КОНФИГУРАЦИИ ПРОВАЙДЕРА ISP                 ║"
+log_and_echo "║         Дата: $(date '+%Y-%m-%d %H:%M:%S')                         ║"
+log_and_echo "╚══════════════════════════════════════════════════════════════╝"
+log_and_echo ""
 
-# Проверка hostname
-echo "2. Проверка hostname:" | tee -a "$LOG_FILE"
-if hostnamectl | grep -q "ISP"; then
-    echo "✓ Hostname содержит 'ISP'" | tee -a "$LOG_FILE"
-    hostnamectl | grep -i "static hostname" | tee -a "$LOG_FILE"
-else
-    echo "✗ Hostname не содержит 'ISP'" | tee -a "$LOG_FILE"
-    hostnamectl | grep -i "static hostname" | tee -a "$LOG_FILE"
-fi
+# ==================== КРИТЕРИЙ 1: IP-АДРЕСАЦИЯ ====================
+log_and_echo "┌──────────────────────────────────────────────────────────────┐"
+log_and_echo "│ КРИТЕРИЙ 1: Проверка IP-адресации                            │"
+log_and_echo "│ Описание: Должны быть настроены IP-адреса:                   │"
+log_and_echo "│           - 172.16.1.1/28 (интерфейс к HQ-RTR)               │"
+log_and_echo "│           - 172.16.2.1/28 (интерфейс к BR-RTR)               │"
+log_and_echo "└──────────────────────────────────────────────────────────────┘"
 
-echo "" | tee -a "$LOG_FILE"
+execute_check "IP-адрес 172.16.1.1/28 (к HQ-RTR)" "ip a | grep 172.16.1.1/28"
+execute_check "IP-адрес 172.16.2.1/28 (к BR-RTR)" "ip a | grep 172.16.2.1/28"
 
-# Проверка временной зоны (исправлена опечатка в названии города)
-echo "3. Проверка временной зоны:" | tee -a "$LOG_FILE"
-if timedatectl | grep -q "Asia/Yekaterinburg"; then
-    echo "✓ Временная зона установлена: Asia/Yekaterinburg" | tee -a "$LOG_FILE"
-else
-    echo "✗ Временная зона не установлена на Asia/Yekaterinburg" | tee -a "$LOG_FILE"
-    timedatectl | grep "Time zone" | tee -a "$LOG_FILE"
-fi
+# ==================== КРИТЕРИЙ 2: HOSTNAME И ВРЕМЕННАЯ ЗОНА ====================
+log_and_echo "┌──────────────────────────────────────────────────────────────┐"
+log_and_echo "│ КРИТЕРИЙ 2: Проверка имени хоста и временной зоны            │"
+log_and_echo "│ Описание: Hostname должен содержать 'ISP'                    │"
+log_and_echo "│           Временная зона = Asia/Yekaterinburg                │"
+log_and_echo "└──────────────────────────────────────────────────────────────┘"
 
-echo "" | tee -a "$LOG_FILE"
-echo "Подробная информация о времени:" | tee -a "$LOG_FILE"
-timedatectl | tee -a "$LOG_FILE"
+execute_check "Временная зона Asia/Yekaterinburg" "timedatectl | grep Asia/Yekaterinburg"
+execute_check "Имя хоста содержит 'ISP'" "hostnamectl | grep -i ISP"
 
-echo "" | tee -a "$LOG_FILE"
-echo "=== Проверка завершена ===" | tee -a "$LOG_FILE"
-echo "Результаты сохранены в файл: $LOG_FILE" | tee -a "$LOG_FILE"
+# ==================== КРИТЕРИЙ 6: СЕТЕВАЯ СВЯЗНОСТЬ ====================
+log_and_echo "┌──────────────────────────────────────────────────────────────┐"
+log_and_echo "│ КРИТЕРИЙ 6: Проверка сетевой связности и выхода в интернет   │"
+log_and_echo "│ Описание: Проверяем доступность Google DNS (8.8.8.8)         │"
+log_and_echo "│           для подтверждения выхода в интернет                │"
+log_and_echo "└──────────────────────────────────────────────────────────────┘"
+
+execute_check "Ping до Google DNS (8.8.8.8)" "ping -c 4 8.8.8.8"
+
+# ==================== ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ====================
+log_and_echo "┌──────────────────────────────────────────────────────────────┐"
+log_and_echo "│ ДОПОЛНИТЕЛЬНО: Информация о сетевых интерфейсах              │"
+log_and_echo "└──────────────────────────────────────────────────────────────┘"
+
+log_and_echo "Команда: ip -br a"
+ip -br a | tee -a "$LOG_FILE"
+log_and_echo ""
+
+log_and_echo "Команда: ip route"
+ip route | tee -a "$LOG_FILE"
+log_and_echo ""
+
+# ==================== ИТОГИ ====================
+log_and_echo ""
+log_and_echo "╔══════════════════════════════════════════════════════════════╗"
+log_and_echo "║                    ПРОВЕРКА ЗАВЕРШЕНА                        ║"
+log_and_echo "║         Результаты сохранены в: $LOG_FILE            ║"
+log_and_echo "╚══════════════════════════════════════════════════════════════╝"
+
+echo ""
+echo "┌──────────────────────────────────────────────────────────────┐"
+echo "│                    СВОДКА РЕЗУЛЬТАТОВ                        │"
+echo "└──────────────────────────────────────────────────────────────┘"
+echo ""
+
+# Подсчёт результатов
+success_count=$(grep -c "✓" "$LOG_FILE")
+fail_count=$(grep -c "✗" "$LOG_FILE")
+
+echo "  ✓ Успешных проверок:    $success_count"
+echo "  ✗ Неуспешных проверок:  $fail_count"
+echo ""
+
+echo "┌──────────────────────────────────────────────────────────────┐"
+echo "│                  СТАТУС ПО КРИТЕРИЯМ                         │"
+echo "└──────────────────────────────────────────────────────────────┘"
+echo ""
+echo "  Критерий 1 (IP-адреса):     $(ip a | grep -q '172.16.1.1/28' && ip a | grep -q '172.16.2.1/28' && echo '✓ OK' || echo '✗ FAIL')"
+echo "  Критерий 2 (Hostname/Time): $(hostnamectl | grep -qi 'ISP' && timedatectl | grep -q 'Asia/Yekaterinburg' && echo '✓ OK' || echo '✗ FAIL')"
+echo "  Критерий 6 (Интернет):      $(ping -c 1 8.8.8.8 &>/dev/null && echo '✓ OK' || echo '✗ FAIL')"
+echo ""
+
+echo "Для просмотра полных результатов: cat $LOG_FILE"
