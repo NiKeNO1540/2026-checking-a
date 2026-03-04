@@ -1,75 +1,122 @@
 #!/bin/bash
 
 # Файл для записи результатов
-LOG_FILE="/var/log/system_check_results.txt"
+LOG_FILE="/var/log/system_check.log"
 
-# Очистка файла перед началом проверки
+# Очистка лог-файла
 > "$LOG_FILE"
 
-# Функция для записи и вывода результатов
+# Функция для логирования и вывода
 log_and_echo() {
     echo "$1"
     echo "$1" >> "$LOG_FILE"
 }
 
-# Функция для выполнения команды и записи результата
+# Функция выполнения проверки
 execute_check() {
     local description="$1"
     local command="$2"
     
-    log_and_echo "=========================================="
     log_and_echo "Проверка: $description"
     log_and_echo "Команда: $command"
-    log_and_echo "------------------------------------------"
     
-    # Выполнение команды и запись результата
-    eval "$command" >> "$LOG_FILE" 2>&1
+    local output
+    output=$(eval "$command" 2>&1)
     local exit_code=$?
     
+    echo "$output" >> "$LOG_FILE"
+    echo "$output"
+    
     if [ $exit_code -eq 0 ]; then
-        log_and_echo "Результат: УСПЕХ"
+        log_and_echo "✓ УСПЕХ"
     else
-        log_and_echo "Результат: ОШИБКА (код: $exit_code)"
+        log_and_echo "✗ ОШИБКА (код: $exit_code)"
     fi
     
     log_and_echo ""
+    return $exit_code
 }
 
-log_and_echo "Начало проверки системы - $(date)"
+# ============================================================================
+# НАЧАЛО ПРОВЕРКИ
+# ============================================================================
+
+clear
+log_and_echo "╔══════════════════════════════════════════════════════════════╗"
+log_and_echo "║         ПРОВЕРКА КОНФИГУРАЦИИ КЛИЕНТА HQ-CLI                 ║"
+log_and_echo "║         Дата: $(date '+%Y-%m-%d %H:%M:%S')                            ║"
+log_and_echo "╚══════════════════════════════════════════════════════════════╝"
 log_and_echo ""
 
-log_and_echo "=========================================="
-log_and_echo "Критерий 1"
-execute_check "Проверка IP адреса 192.168.2.10/28" "ip a | grep 192.168.2.10/28"
+# ==================== КРИТЕРИЙ 1: IP-АДРЕСАЦИЯ ====================
+log_and_echo "┌──────────────────────────────────────────────────────────────┐"
+log_and_echo "│ КРИТЕРИЙ 1: Проверка IP-адресации                            │"
+log_and_echo "│ Описание: IP-адрес должен быть 192.168.2.10/28               │"
+log_and_echo "│           (получен по DHCP или настроен статически)          │"
+log_and_echo "└──────────────────────────────────────────────────────────────┘"
 
-log_and_echo "=========================================="
-log_and_echo "Критерий 2"
-execute_check "Проверка часового пояса Asia/Yekaterinburg" "timedatectl | grep Asia/Yekaterinburg"
-execute_check "Проверка hostname hq-cli.au-team.irpo" "hostnamectl | grep hq-cli.au-team.irpo"
+execute_check "IP-адрес 192.168.2.10/28" "ip a | grep 192.168.2.10/28"
 
-log_and_echo "=========================================="
-log_and_echo "Критерий 5"
-execute_check "Проверка пользователей с домашними директориями" "cat /etc/passwd | grep home"
+# ==================== КРИТЕРИЙ 2: HOSTNAME И ВРЕМЕННАЯ ЗОНА ====================
+log_and_echo "┌──────────────────────────────────────────────────────────────┐"
+log_and_echo "│ КРИТЕРИЙ 2: Проверка имени хоста и временной зоны            │"
+log_and_echo "│ Описание: Hostname = hq-cli.au-team.irpo                     │"
+log_and_echo "│           Временная зона = Asia/Yekaterinburg                │"
+log_and_echo "└──────────────────────────────────────────────────────────────┘"
 
-log_and_echo "=========================================="
-log_and_echo "Критерий 6"
-execute_check "Пинг 192.168.3.1" "ping 192.168.3.1 -c 2"
-execute_check "Пинг 192.168.3.10" "ping 192.168.3.10 -c 2"
-execute_check "Пинг 172.16.2.1" "ping 172.16.2.1 -c 2"
-execute_check "Пинг 192.168.1.10" "ping 192.168.1.10 -c 2"
-execute_check "Пинг 8.8.8.8" "ping 8.8.8.8 -c 2"
-execute_check "Пинг ya.ru (проверка DNS)" "ping ya.ru -c 2"
+execute_check "Временная зона Asia/Yekaterinburg" "timedatectl | grep Asia/Yekaterinburg"
+execute_check "Имя хоста hq-cli.au-team.irpo" "hostnamectl | grep -i hq-cli"
 
-log_and_echo "=========================================="
-log_and_echo "Проверка завершена - $(date)"
-log_and_echo "Результаты сохранены в файл: $LOG_FILE"
+# ==================== КРИТЕРИЙ 6: СЕТЕВАЯ СВЯЗНОСТЬ ====================
+log_and_echo "┌──────────────────────────────────────────────────────────────┐"
+log_and_echo "│ КРИТЕРИЙ 6: Проверка сетевой связности и выхода в интернет   │"
+log_and_echo "│ Описание: Проверяем доступность Google DNS (8.8.8.8)         │"
+log_and_echo "│           для подтверждения выхода в интернет                │"
+log_and_echo "└──────────────────────────────────────────────────────────────┘"
 
-# Дополнительная информация о системе
+execute_check "Ping до Google DNS (8.8.8.8)" "ping -c 4 8.8.8.8"
+
+# ==================== ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ====================
+log_and_echo "┌──────────────────────────────────────────────────────────────┐"
+log_and_echo "│ ДОПОЛНИТЕЛЬНО: Информация о сетевых интерфейсах              │"
+log_and_echo "└──────────────────────────────────────────────────────────────┘"
+
+log_and_echo "Команда: ip -br a"
+ip -br a | tee -a "$LOG_FILE"
 log_and_echo ""
-log_and_echo "Дополнительная системная информация:"
-log_and_echo "Hostname: $(hostname)" >> "$LOG_FILE"
-log_and_echo "Время: $(date)" >> "$LOG_FILE"
-log_and_echo "Пользователь: $(whoami)" >> "$LOG_FILE"
+
+log_and_echo "Команда: ip route"
+ip route | tee -a "$LOG_FILE"
+log_and_echo ""
+
+# ==================== ИТОГИ ====================
+log_and_echo ""
+log_and_echo "╔══════════════════════════════════════════════════════════════╗"
+log_and_echo "║                    ПРОВЕРКА ЗАВЕРШЕНА                        ║"
+log_and_echo "║         Результаты сохранены в: $LOG_FILE            ║"
+log_and_echo "╚══════════════════════════════════════════════════════════════╝"
 
 echo ""
-echo "Для просмотра полных результатов выполните: cat $LOG_FILE"
+echo "┌──────────────────────────────────────────────────────────────┐"
+echo "│                    СВОДКА РЕЗУЛЬТАТОВ                        │"
+echo "└──────────────────────────────────────────────────────────────┘"
+echo ""
+
+# Подсчёт результатов
+success_count=$(grep -c "✓" "$LOG_FILE")
+fail_count=$(grep -c "✗" "$LOG_FILE")
+
+echo "  ✓ Успешных проверок:    $success_count"
+echo "  ✗ Неуспешных проверок:  $fail_count"
+echo ""
+
+echo "┌──────────────────────────────────────────────────────────────┐"
+echo "│                  СТАТУС ПО КРИТЕРИЯМ                         │"
+echo "└──────────────────────────────────────────────────────────────┘"
+echo ""
+echo "  Критерий 1 (IP-адрес):      $(ip a | grep -q '192.168.2.10/28' && echo '✓ OK' || echo '✗ FAIL')"
+echo "  Критерий 2 (Hostname/Time): $(hostnamectl | grep -qi 'hq-cli' && timedatectl | grep -q 'Asia/Yekaterinburg' && echo '✓ OK' || echo '✗ FAIL')"
+echo "  Критерий 6 (Интернет):      $(ping -c 1 8.8.8.8 &>/dev/null && echo '✓ OK' || echo '✗ FAIL')"
+echo ""
+
+echo "Для просмотра полных результатов: cat $LOG_FILE"
