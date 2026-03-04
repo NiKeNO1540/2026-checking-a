@@ -53,23 +53,23 @@ chmod +x HQ-CLI-Module-1.sh && ./HQ-CLI-Module-1.sh
 </details>
 
 <details>
-<summary>BR-SRV</summary>
-
-```bash
-apt-get update && apt-get install wget -y
-wget https://raw.githubusercontent.com/NiKeNO1540/2026-checking-a/refs/heads/main/BR-SRV-Module-1.sh
-chmod +x BR-SRV-Module-1.sh && ./BR-SRV-Module-1.sh
-```
-
-</details>
-
-<details>
 <summary>BR-RTR</summary>
 
 ```bash
 apt-get update && apt-get install wget -y
 wget https://raw.githubusercontent.com/NiKeNO1540/2026-checking-a/refs/heads/main/BR-RTR-Module-1.sh
 chmod +x BR-RTR-Module-1.sh && ./BR-RTR-Module-1.sh
+```
+
+</details>
+
+<details>
+<summary>BR-SRV</summary>
+
+```bash
+apt-get update && apt-get install wget -y
+wget https://raw.githubusercontent.com/NiKeNO1540/2026-checking-a/refs/heads/main/BR-SRV-Module-1.sh
+chmod +x BR-SRV-Module-1.sh && ./BR-SRV-Module-1.sh
 ```
 
 </details>
