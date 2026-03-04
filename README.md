@@ -13,7 +13,7 @@
 
 ```bash
 apt-get update && apt-get install wget -y
-https://raw.githubusercontent.com/NiKeNO1540/2026-checking-a/refs/heads/main/ISP-Module-1.sh
+wget https://raw.githubusercontent.com/NiKeNO1540/2026-checking-a/refs/heads/main/ISP-Module-1.sh
 chmod +x ISP-Module-1.sh && ./ISP-Module-1.sh
 ```
 
