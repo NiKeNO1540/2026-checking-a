@@ -103,7 +103,7 @@ check_dns_record() {
     local record_type="$3"
     
     local result
-    result=$(host "$query" 127.0.0.1 2>/dev/null)
+    result=$(host "$query" 192.168.1.10 2>/dev/null)
     
     if echo "$result" | grep -q "$expected"; then
         log_and_echo "  ✓ $query → $expected"
@@ -324,7 +324,7 @@ log_and_echo ""
 
 # --- 7.8 Проверка DNS-разрешения через host ---
 log_and_echo "═══ 7.8 Проверка DNS-разрешения (команда host) ═══"
-log_and_echo "DNS-сервер: 127.0.0.1"
+log_and_echo "DNS-сервер: 192.168.1.10"
 log_and_echo ""
 
 log_and_echo "--- Прямые записи (A) ---"
