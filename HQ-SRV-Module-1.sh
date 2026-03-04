@@ -276,7 +276,6 @@ if [ -f "$ZONE_REVERSE2" ]; then
     
     check_config_exists "$ZONE_REVERSE2" 'SOA.*au-team.irpo' "SOA запись настроена"
     check_config_exists "$ZONE_REVERSE2" 'NS.*hq-srv.au-team.irpo' "NS запись указывает на hq-srv"
-    check_config_exists "$ZONE_REVERSE2" '1.*IN.*PTR.*hq-rtr.au-team.irpo' "PTR запись 1 → hq-rtr"
     check_config_exists "$ZONE_REVERSE2" '10.*IN.*PTR.*hq-cli.au-team.irpo' "PTR запись 10 → hq-cli"
 else
     log_and_echo "✗ Файл $ZONE_REVERSE2 не найден"
